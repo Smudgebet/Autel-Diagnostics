@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('Stylesheet'); ?>
+  </head>
+  <body>
+    <img src="https://blythautomotivesolutions.com/wp-content/uploads/2022/02/autel-logo-full.png" width="250px">
+    <div id="goodsInForm">
+      <form  method="POST" action="#" onsubmit="return false">
+        <fieldset> 
+          <legend>Autel Diagnostics Order Processing</legend> 
+          <label for="id">Enter Order Id:</label>
+          <input type="text" id="id" name="id" placeholder='Scan order ID number'><br>
+          <input class='button' type="button" value="Look Up" onclick="info()"><span id="result"></span><br>
+          <input class='button' type="button" value="Print Shipping Note" style="background-color: #29a0ee;" hidden><br>
+          <hr>
+          <br>
+
+          <label for="order_id">order_id:</label>
+          <label for="request_date"style="width: 200px;">request_date:</label>
+          <label for="request_qty" style="width: 50px;">qty:</label>
+          <label for="part_number">part_number:</label>
+
+          <input type="text" id="order_id" name="order_id" disabled></input>                 
+          <input type="text" style="width: 200px;" id="request_date" name="request_date" disabled></input> 
+          <input type="text" style="width: 50px;" id="request_qty" name="request_qty" disabled></input>        
+          <input type="text" id="part_number" name="part_number" disabled></input>
+
+          <label for="locator">Stock locator:</label>
+          <label for="material_description" style="width: 400px;">material_description:</label>
+          <label for="qty" style="width: 115px;">Stock qty:</label>
+
+          <input type="text" id="locator" name="locator" disabled></input>          
+          <input type="text" style="width: 400px;"id="material_description" name="material_description" disabled></input>         
+          <input type="text" style="width: 115px;" id="qty" name="qty" disabled></input>
+
+          <label for="delivery_address">Contact & delivery address: </label><br>
+          <input type="text" style="width: 795px;" id="delivery_address" name="delivery_address" disabled></input>
+          
+          <label for="value">Value: </label><br>
+          <input type="text" style="width: 100px;" id="value" name="value" disabled></input> <small>Please ensure you add extra insurance when logging with TNT or DHL for the value of the product times the qty</small>
+          <br>
+          <br>
+          <hr>
+          <br>
+          <label for="sn">Enter Serial Number: </label>
+          <input id="sn" name="sn" type='text' placeholder='Enter Serial Number' value='' required/><small>Use a comma , to separate serial numbers</small></br>
+          
+          <label>Select Courier:</label>
+          <input type="radio" id="dhl" name="courier" value="DHL" required>
+          <label for="dhl" style="width: 50px;">DHL</label>
+          <input type="radio" id="tnt" name="courier" value="TNT">
+          <label for="tnt" style="width: 50px;">TNT</label><br>
+          
+          <label for="cons">Consignment #: </label>
+          <input id="cons" name="cons" type='text'  placeholder='Enter Consignment Number' value='' required/></br> 
+          
+          
+          <!-- <label for="picture">Take a picture: </label><br><br>
+          <video id="player" width="250px" controls autoplay playsinline></video>
+          <canvas id="canvas" width="146" height="73"></canvas><br>
+          <input type="button" id="capture" value="Capture"> 
+          <input type="hidden" id="png" name="png"/> -->
+
+
+        </fieldset>
+        <br>
+        <input class='button' type="submit" value="Save" onclick="updateOrder()">
+      </form>
+      <label id="resp"></label>
+      <small>v2.0</small>
+    </div>
+    <?!= include('Script'); ?>
+
+    <script>
+
+      function  info () {
+      var id = document.getElementById("id").value;
+      document.getElementById("result").innerHTML = "Checking....";
+      document.getElementById("order_id").value = "";
+      document.getElementById("request_date").value = "";
+      document.getElementById("request_qty").value = "";
+      document.getElementById("part_number").value = "";
+      document.getElementById("locator").value = "";
+      document.getElementById("material_description").value = "";
+      document.getElementById("qty").value = "";
+      document.getElementById("delivery_address").value = ""; 
+      document.getElementById("value").value = "";   
+      google.script.run.withSuccessHandler(function(customerInfo){
+        console.table(customerInfo);
+
+        if (customerInfo.result == 'Order Not Found') {
+              document.getElementById("result").innerHTML = "<b>Order not found!</b>";
+        } else if (customerInfo.serialNum != '') {
+                  document.getElementById("result").innerHTML = "<b>This order has been shipped already!</b>";
+        } else {
+                document.getElementById("result").innerHTML = customerInfo.result;
+                document.getElementById("order_id").value = customerInfo.orderID;
+                document.getElementById("request_date").value = customerInfo.requestDate;
+                document.getElementById("request_qty").value = customerInfo.qty;
+                document.getElementById("part_number").value = customerInfo.partNumber;
+                document.getElementById("locator").value = customerInfo.stockLocator;
+                document.getElementById("material_description").value = customerInfo.materialDesc;
+                document.getElementById("qty").value = customerInfo.stockQty;
+                document.getElementById("delivery_address").value = customerInfo.address;
+                document.getElementById("value").value = customerInfo.value.toLocaleString('en-US', {style: 'currency', currency: 'GBP',});;
+                
+        }
+
+      }).getCustomerById(id);      
+
+      };
+
+  function updateOrder(){
+      var date = new Date()
+      const sdate = date.toISOString().split('T')[0];
+      var customerInfo = {};
+      customerInfo.serialNumber = document.getElementById("sn").value;
+      customerInfo.shipDate = sdate;
+      customerInfo.courier = document.querySelector('input[name="courier"]:checked').value;
+      customerInfo.conum = document.getElementById("cons").value;
+      customerInfo.rqty = document.getElementById("request_qty").value;
+      customerInfo.sqty = document.getElementById("qty").value;
+      customerInfo.oid = document.getElementById("id").value;
+      customerInfo.partNum = document.getElementById("part_number").value;
+      customerInfo.val = document.getElementById("value").value;
+      console.table(customerInfo); 
+      var id = document.getElementById("id").value;
+      var pid = document.getElementById("part_number").value;
+      
+      google.script.run.withSuccessHandler(function(res){
+              document.getElementById("result").innerHTML = "Order Updated!....updating stock records....";
+
+              google.script.run.withSuccessHandler(function(e){
+                        document.getElementById("result").innerHTML = "Stock updated - generating packing list..."
+                        //document.getElementById("id").value = "";
+                        document.getElementById("order_id").value = "";
+                        document.getElementById("request_date").value = "";
+                        document.getElementById("request_qty").value = "";
+                        document.getElementById("part_number").value = "";
+                        document.getElementById("locator").value = "";
+                        document.getElementById("material_description").value = "";
+                        document.getElementById("qty").value = "";
+                        document.getElementById("delivery_address").value = "";
+                        document.getElementById("value").value = "";
+                        document.getElementById("sn").value = "";
+                        document.getElementById("cons").value = "";
+                        document.getElementById("dhl").checked=false;
+                        document.getElementById("tnt").checked=false;
+
+                        google.script.run.withSuccessHandler(function(e){
+                          document.getElementById("result").innerHTML = e.url2;
+
+                        }).getPackingList(id);
+
+                
+                }).editStockById(pid,customerInfo);  
+    }).editCustomerById(id, customerInfo)
+
+
+   }
+    </script>
+  </body>
+</html>
