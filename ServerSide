@@ -1,0 +1,142 @@
+function getCustomerById(id) {
+    //const id = 124000009;
+    const ss = SpreadsheetApp.openById("16PSxJR9RCoJ6Kys6gI4CRhp61hjG4dQYTc_b4kEJlz0");
+    const ws = ss.getSheetByName("Shipments");
+    const custIds = ws.getRange(2, 1, ws.getLastRow()-1, 1).getValues().map(r => r[0].toString().toLowerCase());
+    const posIndex = custIds.indexOf(id.toString().toLowerCase());
+    const rowNumber = posIndex === -1 ? 0 : posIndex + 2;
+    console.log(rowNumber);
+    if (rowNumber === 0){
+        return {
+                result:"Order Not Found",
+                orderID:"OrderNotFound",
+                requestDate:"OrderNotFound",
+                partNumber:"OrderNotFound",
+                materialDesc:"OrderNotFound",
+                qty:"OrderNotFound",
+                address:"OrderNotFound",
+                stockLocator:"OrderNotFound",
+                stockQty:"OrderNotFound",
+                serialNum:"OrderNotFound",
+                value:"OrderNotFound"
+                }
+
+    } 
+    const customerInfo = ws.getRange(rowNumber, 1, 1, 19).getValues()[0]; //adjust 3rd number in rowNumber for the qty of columsn you want to read back - columns start at #1
+    const rdate = customerInfo[1].toISOString().split('T')[0];
+    //console.log(rdate);
+    return {
+            result:"Order Found",
+            orderID:customerInfo[0],
+            requestDate:rdate,
+            partNumber:customerInfo[3],
+            materialDesc:customerInfo[4],
+            qty:customerInfo[5],
+            address:customerInfo[6],
+            stockLocator:customerInfo[7],
+            stockQty:customerInfo[8],
+            serialNum:customerInfo[11],
+            value:customerInfo[18]
+            }
+}
+
+function editCustomerById(id, customerInfo){
+    const ss = SpreadsheetApp.openById("16PSxJR9RCoJ6Kys6gI4CRhp61hjG4dQYTc_b4kEJlz0");
+    const ws = ss.getSheetByName("Shipments");
+    const custIds = ws.getRange(2, 1, ws.getLastRow()-1, 1).getValues().map(r => r[0].toString().toLowerCase());
+    const posIndex = custIds.indexOf(id.toString().toLowerCase());
+    const rowNumber = posIndex === -1 ? 0 : posIndex + 2;
+    ws.getRange(rowNumber,12,1,4 ).setValues([[customerInfo.serialNumber, customerInfo.shipDate, customerInfo.courier, customerInfo.conum]]);
+}
+
+function editStockById(pid, customerInfo){
+    //const customerInfo = {sqty:"5",rqty:"1"};
+    //const pid = 100000043;
+    const ss = SpreadsheetApp.openById("16PSxJR9RCoJ6Kys6gI4CRhp61hjG4dQYTc_b4kEJlz0");
+    const ws = ss.getSheetByName("Stock Records");
+    const as = ss.getSheetByName("Audit");
+    const custIds = ws.getRange(2, 1, ws.getLastRow()-1, 1).getValues().map(r => r[0].toString().toLowerCase());
+    const posIndex = custIds.indexOf(pid.toString().toLowerCase());
+    const rowNumber = posIndex === -1 ? 0 : posIndex + 2;
+    const stockBalance = customerInfo.sqty - customerInfo.rqty;
+    const auditQty = 0-customerInfo.rqty;
+    const date = new Date();
+    const rdate = date.toISOString().split('T')[0];
+    const user = Session.getActiveUser().getEmail();
+    const orderID = customerInfo.oid;
+    const partNum = customerInfo.partNum;
+    console.log(orderID);
+    ws.getRange(rowNumber,6,1,1).setValue(stockBalance);
+    ws.getRange(rowNumber,7,1,1).setValue("Updated by: " + user +  " on: " + rdate + " for order: " + orderID);
+    as.appendRow([partNum, user, auditQty.toString(), rdate, orderID]);
+}
+
+function getPackingList (id) {
+
+    //const id = 100003;
+    const ss = SpreadsheetApp.openById("16PSxJR9RCoJ6Kys6gI4CRhp61hjG4dQYTc_b4kEJlz0");
+    const ws = ss.getSheetByName("Shipments");
+    const custIds = ws.getRange(2, 1, ws.getLastRow()-1, 1).getValues().map(r => r[0].toString().toLowerCase());
+    const posIndex = custIds.indexOf(id.toString().toLowerCase());
+    const rowNumber = posIndex === -1 ? 0 : posIndex + 2;   
+    const customerInfo = ws.getRange(rowNumber, 1, 1, 15).getValues()[0];
+    const rdate = customerInfo[1].toISOString().split('T')[0];
+
+    const orderID = customerInfo[0];
+    const requestDate = rdate;
+    const partNumber = customerInfo[3];
+    const materialDesc = customerInfo[4];
+    const qty = customerInfo[5];
+    const address = customerInfo[6];
+    const shipmentDate = customerInfo[12];
+    const courier = customerInfo[13];
+    var serialNum = customerInfo[11];
+    serialNum = serialNum.toString().replace(/,/g, '\n');
+    const conNum = customerInfo[14];
+    const pss = SpreadsheetApp.openById("1_s0h1Eoq4ZYz8xMxeMBbSSyJxEqrcZ0kJq3hri_G7Uk");
+    const ps = pss.getSheetByName("Template");
+
+    ps.getRange(2,3,1).setValue(address);
+    ps.getRange(4,2,1).setValue(shipmentDate);
+    ps.getRange(5,2,1).setValue(courier);
+    ps.getRange(6,2,1).setValue(conNum);
+    
+    ps.getRange(9,1,1).setValue(orderID);
+    ps.getRange(9,2,1).setValue(partNumber);
+    ps.getRange(9,3,1).setValue(materialDesc);
+    ps.getRange(9,5,1).setValue(serialNum);
+    ps.getRange(9,4,1).setValue(qty);
+    SpreadsheetApp.flush();
+    //exportSheet(orderID);
+
+    const fn = orderID;
+    var sheets = pss.getSheets();
+    const blob = pss.getAs('application/pdf');
+    const dest = DriveApp.getFolderById('1iTuDO3F-pod4v4zui7IHke6bNvaaNTaI')
+                .createFile(blob)
+                .setName(fn);
+    const url2 = dest.getUrl();
+
+    ///////////
+    console.log(url2);
+    var obj = {};
+    obj.url2 = '<a class="button2" target="_blank" href="' + url2 +'">Print Shipping Sheet</a>';
+    console.log(obj);
+    return obj;
+
+}
+
+
+function exportSheet(fileName) {    
+  //Utilities.sleep(3000);// pause in the loop for 200 milliseconds
+  const ss = SpreadsheetApp.openById("1_s0h1Eoq4ZYz8xMxeMBbSSyJxEqrcZ0kJq3hri_G7Uk");
+  const fn = fileName;
+  var sheets = ss.getSheets();
+  const blob = ss.getAs('application/pdf');
+  const dest = DriveApp.getFolderById('1iTuDO3F-pod4v4zui7IHke6bNvaaNTaI')
+                .createFile(blob)
+                .setName(fn);
+  const url2 = dest.getUrl.toString();
+  console.log(url2);
+  return(url2);
+}
