@@ -1,0 +1,68 @@
+var url = 'https://docs.google.com/spreadsheets/d/16PSxJR9RCoJ6Kys6gI4CRhp61hjG4dQYTc_b4kEJlz0/edit#gid=865789127';
+var url2 = url2;
+function doGet(e) {
+
+  //define sheet, get next free row
+  var ss = SpreadsheetApp.openByUrl(url);
+  var ws = ss.getSheetByName("Stock Records");
+  var ws2 = ss.getSheetByName("Shipments");
+  var list = ws.getRange(2,1,ws.getRange("A1").getDataRegion().getLastRow(), 1).getValues();
+  //var tmp = HtmlService.createTemplateFromFile("WebApp2");
+  //tmp.list = list.map(function(r){return r[0];});
+  //return tmp.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+
+  return HtmlService.createTemplateFromFile('WebApp2')
+      .evaluate()
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function include(filename) { 
+  return HtmlService.createHtmlOutputFromFile(filename)
+      .getContent();
+}
+
+
+function processForm(e) {
+
+  //Sleep utility - use if you need a pause in the script
+  //Utilities.sleep(5000);
+  
+  //Declare form input values//
+  var sn = e.sn;
+  var cons = e.cons;
+  var base64 = e.png;
+  var fn = Date.now() + '.png';
+
+  //Use below to capture in the execution log to see if you have an output
+  //Logger.log("message is: " + msg);
+  //Logger.log("data is: " + base64);
+
+  //Decode base64 and convert to blob 
+  var decoded = Utilities.base64Decode(base64);
+  var blob = Utilities.newBlob(decoded, MimeType.PNG, fn);
+
+  //Use this if you want to save a file in google drive - Create file in gogle drive and set file attributes 
+  var folder = DriveApp.getFolderById('1OsIZy4G0xUMyq6dlf-0yjiCHZfaDy--B');
+  var file = folder.createFile(blob); // Add image to Drive
+  file.setSharing(DriveApp.Access.DOMAIN, DriveApp.Permission.VIEW);
+  var id = file.getId();
+  
+  //define sheet, get next free row
+  var url = 'https://docs.google.com/spreadsheets/d/16PSxJR9RCoJ6Kys6gI4CRhp61hjG4dQYTc_b4kEJlz0/edit#gid=865789127';
+  var ss = SpreadsheetApp.openByUrl(url);
+  var sheet = ss.getSheetByName("Shipments");
+  var lastrow = sheet.getLastRow()+1;
+  var range = sheet.getRange(lastrow,8);
+  
+  var imgURLthumb = Drive.Files.get(id).thumbnailLink.replace(/\=s.+/,"=s512"); 
+  var imgURL = 'https://drive.google.com/uc?export=view&id=' + file.getId();
+  var image2 = SpreadsheetApp.newCellImage().setSourceUrl(imgURLthumb).build();
+ 
+  sheet.appendRow([new Date(), courier, cons, user, routed, sender, imgURL]);
+  range.setValue(image2);
+  
+
+  //Below inserts full size image over cells 
+  //sheet.insertImage(blob,8, sheet.getLastRow());
+
+}
