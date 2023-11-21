@@ -1,0 +1,34 @@
+<script>
+  const player = document.getElementById('player');
+  const canvas = document.getElementById('canvas');
+  const context = canvas.getContext('2d');
+  const captureButton = document.getElementById('capture');
+  const videoConstraints = {facingMode: 'front'};
+  const constraints = {video: videoConstraints, audio: false};
+
+  navigator.mediaDevices.getUserMedia(constraints).then((stream) => {
+    // Attach the video stream to the video element and autoplay.
+    player.srcObject = stream;
+  }); 
+
+  captureButton.addEventListener('click', () => {
+    //context.fillStyle = "blue";
+    //context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(player, 0, 0, canvas.width, canvas.height);
+    // Stop all video streams.
+    //player.srcObject.getVideoTracks().forEach(track => track.stop());
+    //var fname = Date.now() + '.png'
+    let dataURL = canvas.toDataURL();
+    const base64 = getBase64StringFromDataURL(dataURL);
+
+    document.getElementById("png").value = base64
+    console.log(document.getElementById("png").value);
+
+    });
+
+    const getBase64StringFromDataURL = (dataURL) =>
+    dataURL.replace('data:', '').replace(/^.+,/, '');
+
+
+   
+</script>
